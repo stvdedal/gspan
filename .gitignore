@@ -1,0 +1,16 @@
+#
+# tempararies
+#
+*#*
+*~
+
+#
+# eclipse
+#
+.cproject
+.project
+.settings
+
+# executables
+test_gspan
+test_minimum_check
