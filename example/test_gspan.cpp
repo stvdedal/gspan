@@ -1,7 +1,5 @@
 #include "gspan.hpp"
-
 #include <boost/graph/adjacency_list.hpp>
-
 #include <iostream>
 
 using namespace boost;
