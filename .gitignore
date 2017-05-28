@@ -12,5 +12,5 @@
 .settings
 
 # executables
-test_gspan
+gspan
 test_minimum_check

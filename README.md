@@ -4,8 +4,6 @@
 
 ## Data format
 
-### short syntax description
-
 Input data is a one or many _input graphs_.
 Output data is one or many _patterns_ with _mappings_ to _input graph_.
 \# is comment line
@@ -27,7 +25,7 @@ e <edge_id> <vertex_id> <vertex_id> <value>
 #
 # begin section with mined pattern, it is also graph
 #
-p <pattern_id>
+p <pattern_id> # occurence: <num>
 v <vertex_id> <value>
 ...[repeat v]...
 e <edge_id> <vertex_id> <vertex_id> <value>
