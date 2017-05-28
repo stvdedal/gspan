@@ -248,10 +248,11 @@ gspan_one_graph(const IG& ig,
                 VPTag vptag,
                 EPTag eptag)
 {
-  using Alg = gspan::Alg<IG, Result, gspan::one_graph_tag, VPTag, EPTag>;
-  Alg alg(result, minsup, vptag, eptag);
   typename gspan_traits<IG, VPTag, EPTag>::RExt r_ext;
   gspan::enumerate_one_edges(r_ext, &ig, vptag, eptag);
+
+  using Alg = gspan::Alg<IG, Result, gspan::one_graph_tag, VPTag, EPTag>;
+  Alg alg(result, minsup, vptag, eptag);
   alg.run(r_ext);
 }
 
@@ -267,6 +268,15 @@ gspan_many_graphs(IGIter ig_begin,
                   VPTag vptag,
                   EPTag eptag)
 {
+  using IG = typename std::iterator_traits<IGIter>::value_type;
+  typename gspan_traits<IG, VPTag, EPTag>::RExt r_ext;
+  for (; ig_begin != ig_end; ++ig_begin) {
+    gspan::enumerate_one_edges(r_ext, &*ig_begin, vptag, eptag);
+  }
+
+  using Alg = gspan::Alg<IG, Result, gspan::many_graphs_tag, VPTag, EPTag>;
+  Alg alg(result, minsup, vptag, eptag);
+  alg.run(r_ext);
 }
 
 #endif

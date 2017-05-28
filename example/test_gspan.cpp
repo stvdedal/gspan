@@ -34,7 +34,7 @@ std::vector<std::string> e_values;
 enum OutputMappings
 {
   OUTPUT_MAPPING_NONE, OUTPUT_MAPPING_ONE_AUTOMORPH, OUTPUT_MAPPING_ALL
-} output_mappings = OUTPUT_MAPPING_ALL;
+} output_mappings = OUTPUT_MAPPING_NONE;
 
 template <typename MG, typename SBG>
 void
@@ -114,6 +114,20 @@ remove_whitespaces_right(std::string& s)
   return s;
 }
 
+void
+print_usage(std::ostream& s)
+{
+  s << "Usage: gspan [ <minsupport> ] [OPTION]" << std::endl
+    << "Graph-based substructure pattern mining." << std::endl
+    << "Read input data from standard input, write result to standard output."
+    << std::endl << "OPTION is" << std::endl
+    << "  <minsupport>  minimal pattern occurence, default 1" << std::endl
+    << "  -om           output pattern to input graph mapping options:"
+    << std::endl
+    << "                  none, autgrp, all, default. default is none"
+    << std::endl << std::endl;
+}
+
 int
 main(int argc, char** argv)
 {
@@ -123,6 +137,28 @@ main(int argc, char** argv)
     std::stringstream ss(argv[1]);
     if (!(ss >> min_support))
       min_support = 1;
+  }
+
+  for (int i = 1; i < argc; ++i) {
+    std::string arg(argv[i]);
+    if (arg == "-h" || arg == "--help") {
+      print_usage(std::cout);
+      return 0;
+    } else if (arg == "-om") {
+      if (i + 1 < argc) {
+        std::string param(argv[i + 1]);
+        if (param == "autgrp") {
+          output_mappings = OUTPUT_MAPPING_ONE_AUTOMORPH;
+        }
+        if (param == "all") {
+          output_mappings = OUTPUT_MAPPING_ALL;
+        }
+        continue;
+      } else {
+        print_usage(std::cerr);
+        return 1;
+      }
+    }
   }
 
   std::list<InputGraph> input_graphs;
@@ -202,7 +238,6 @@ main(int argc, char** argv)
                   << " vertex_id_2=" << vertex_id_2 << std::endl;
         return 1;
       }
-      std::cerr << "vertex_id_2=" << vertex_id_2 << std::endl;
       std::string value;
       getline(ss, value);
       remove_whitespaces_left(value);

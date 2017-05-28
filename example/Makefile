@@ -1,5 +1,5 @@
 INCLUDE = ../include
-CXXFLAGS += -O0 -g -Wall -I$(INCLUDE) 
+CXXFLAGS += -O3 -Wall -I$(INCLUDE) 
 
 #-Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-local-typedefs
 
