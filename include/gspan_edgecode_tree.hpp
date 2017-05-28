@@ -1,3 +1,10 @@
+/**
+ * \file
+ * \author stvdedal@gmail.com
+ *
+ * \brief
+ * Edge code and dfs code
+ */
 #ifndef GSPAN_EDGECODE_TREE_HPP
 #define GSPAN_EDGECODE_TREE_HPP
 
@@ -111,6 +118,7 @@ namespace gspan {
         return g.edge_value(key).*pm;
       }
     };
+
   } // namespace detail
 
   template <typename PropertyTag, typename Graph>
@@ -154,6 +162,11 @@ namespace gspan {
   {
   };
 
+  /**
+   * \brief
+   * Graph based on single-linked list.
+   * It represents edge code and dfs code
+   */
   template <typename VP, typename EP, typename D = boost::directedS,
     typename VI = std::size_t, typename EI = std::size_t>
   class edgecodetree
@@ -191,8 +204,9 @@ namespace gspan {
     prev_rmost() const;
 
     // ------------------------------------------
-    // Graph requirements
+    /// @name Graph concept requirements
     // ------------------------------------------
+    ///@{
 
     class vertex_descriptor
     {
@@ -236,9 +250,12 @@ namespace gspan {
     static vertex_descriptor
     null_vertex();
 
+    ///@}
     // ------------------------------------------
-    // IncidenceGraph requirements
+    /// @name IncidenceGraph concept requirements
     // ------------------------------------------
+    ///@{
+
     typedef edge_index_type degree_size_type;
 
     class out_edge_iterator : public std::iterator<std::forward_iterator_tag,
@@ -290,9 +307,12 @@ namespace gspan {
     inline bool
     is_incident(vertex_descriptor_reference v) const;
 
+    ///@}
     // ------------------------------------------
-    // VertexListGraph requirements
+    /// @name VertexListGraph concept requirements
     // ------------------------------------------
+    ///@{
+
     typedef vertex_index_type vertices_size_type;
 
     class vertex_iterator : public std::iterator<
@@ -327,9 +347,11 @@ namespace gspan {
     vertices_size_type
     num_vertices() const;
 
+    ///@}
     // ------------------------------------------
-    // EdgeListGraph requirements
+    /// @name EdgeListGraph concept requirements
     // ------------------------------------------
+    ///@{
 
     typedef edge_index_type edges_size_type;
 
@@ -374,9 +396,12 @@ namespace gspan {
     edges_size_type
     num_rmpath_edges() const;
 
+    ///@}
     // ------------------------------------------
-    // Property map support
+    /// @name Property map concept support
     // ------------------------------------------
+    ///@{
+
     typedef vertex_bundled_type vertex_bundled;
     typedef edge_bundled_type edge_bundled;
 
@@ -391,6 +416,8 @@ namespace gspan {
 
     inline edge_bundled_reference
     edge_value(edge_descriptor_reference k) const;
+
+    ///@}
 
   private:
 

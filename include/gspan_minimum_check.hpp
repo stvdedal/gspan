@@ -1,3 +1,10 @@
+/**
+ * \file
+ * \author stvdedal@gmail.com
+ *
+ * \brief
+ * Minimality check functionality
+ */
 #ifndef GSPAN_MINIMUM_CHECK_HPP
 #define GSPAN_MINIMUM_CHECK_HPP
 
@@ -6,6 +13,9 @@
 
 namespace gspan {
 
+  /**
+   * Insert into map MinExt new entry
+   */
   template <typename MinExt, typename VI, typename MG, typename SBG,
     typename IGEdge>
   void
@@ -16,6 +26,7 @@ namespace gspan {
                IGEdge&& e,
                const SBG* prev_sbg)
   {
+    /// first construct and insert key (Mined Graph or Ec)
     auto it =
       min_ext.insert(std::make_pair(make_ec(src,
                                             dst,
@@ -26,6 +37,7 @@ namespace gspan {
                                             boost::edge_bundle_t()),
                                     typename MinExt::mapped_type())).first;
 
+    /// then construct and insert *subgraph*
     if (it == min_ext.begin()) {
       const MG& mg = it->first;
       it->second.emplace(it->second.begin(),
@@ -35,16 +47,21 @@ namespace gspan {
                          prev_sbg);
     }
 
+    /// at last, remove all other (non-minimal entries)
     it = min_ext.begin();
     min_ext.erase(++it, min_ext.end());
   }
 
+  /**
+   * Insert into map MinExt new entry
+   */
   template <typename MinExt, typename IG, typename IGEdge>
   void
   add_min_edge(MinExt& min_ext, IGEdge&& e, const IG* g)
   {
     using Traits = gspan_traits<IG>;
 
+    /// first construct and insert key (Mined Graph or Ec)
     auto it =
       min_ext.insert(std::make_pair(make_ec(0,
                                             1,
@@ -54,15 +71,26 @@ namespace gspan {
                                             boost::vertex_bundle_t(),
                                             boost::edge_bundle_t()),
                                     typename MinExt::mapped_type())).first;
+
+    /// then construct and insert *subgraph*
     if (it == min_ext.begin()) {
       const typename Traits::MG& mg = it->first;
       it->second.emplace(it->second.begin(), *edges(mg).first, e, &mg, g);
     }
 
+    /// at last, remove all other (non-minimal entries)
     it = min_ext.begin();
     min_ext.erase(++it, min_ext.end());
   }
 
+  /**
+   * Collect backward edges into MinExt container
+   * \param[out] min_ext    container
+   * \param[in]  rmpath     sequence of edges that forms the right most path
+   * \param[in]  mg         mined graph, in this context, it means minimal graph
+   * \param[in]  sbgs       subgraphs of input graph
+   * \param[in]  ig         input graph, in this context, it means tested graph
+   */
   template <typename MinExt, typename RMPath, typename MG, typename SBG,
     typename IG>
   void
@@ -77,7 +105,7 @@ namespace gspan {
     using IGV = typename IG::vertex_descriptor;
     using IGE = typename IG::edge_descriptor;
 
-    /*
+    /**
      * iterate over rmpath vertices, beginning with first vertex
      * examine all backward edges: from right most vertex to rmpath vertex
      */
@@ -114,6 +142,14 @@ namespace gspan {
     }
   }
 
+  /**
+   * Collect forward edges into MinExt container
+   * \param[out] min_ext    container
+   * \param[in]  rmpath     sequence of edges that forms the right most path
+   * \param[in]  mg         mined graph, in this context, it means minimal graph
+   * \param[in]  sbgs       subgraphs of input graph
+   * \param[in]  ig         input graph, in this context, it means tested graph
+   */
   template <typename MinExt, typename RMPath, typename MG, typename SBG,
     typename IG>
   void
@@ -133,7 +169,7 @@ namespace gspan {
     MGV rmostv_mg = target(rmpath.front(), mg);
     auto rmost_index = v_index(mg, rmostv_mg);
 
-    /*
+    /**
      * forward pure
      * examine forward edges: from right most vertex
      */
@@ -150,7 +186,7 @@ namespace gspan {
       }
     }
 
-    /*
+    /**
      * forward rmpath
      * iterate over rmpath vertices, beginning with right most vertex
      * examine forward edges: from rmpath vertex
@@ -179,6 +215,11 @@ namespace gspan {
     }
   }
 
+  /**
+   * Equality check of two edges
+   * \param[in] e1, e2 edge to compare
+   * \param[in] g1, g2 those graphs
+   */
   template <typename EcGraph>
   bool
   is_equal(const typename EcGraph::edge_descriptor& e1,
@@ -199,6 +240,10 @@ namespace gspan {
     return true;
   }
 
+  /**
+   * Perform minimality check
+   * \param[in] tested_graph graph for testing
+   */
   template <typename EcGraph>
   bool
   is_minimum(const EcGraph& tested_graph)
@@ -213,14 +258,14 @@ namespace gspan {
     using MGE = typename MG::edge_descriptor;
     using IGE = typename EcGraph::edge_descriptor;
 
-    /*
+    /**
      * tested_dfsc is a representation of the tested_graph
      */
     std::vector<IGE> tested_dfsc(nedges);
 
-    /*
+    /**
      * the sequence of MinExt is a newly constructed tested_graph (MG)
-     * with mappings (std::list<SBG>) to original tested_graph
+     * with mappings (std::list<SBG>) to original tested_graph.
      * MinExt is a map, but its size is 1, it contains only one *minimal* MG
      */
     using MinExt = std::map<MG, std::list<SBG>, gspan::edgecode_compare_dfs>;

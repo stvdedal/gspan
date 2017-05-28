@@ -1,3 +1,10 @@
+/**
+ * \file
+ * \author stvdedal@gmail.com
+ *
+ * \brief
+ * Edge code compare functors
+ */
 #ifndef GSPAN_EDGECODE_COMPARE_HPP
 #define GSPAN_EDGECODE_COMPARE_HPP
 
@@ -7,6 +14,7 @@
 
 namespace gspan {
 
+  /// compare functors for R edge extentions
   struct edgecode_compare_dfs
   {
     template <typename G>
@@ -14,6 +22,7 @@ namespace gspan {
     operator()(const G& lhs, const G& rhs) const;
   };
 
+  /// compare functors for X edge extentions
   struct edgecode_compare_lex
   {
     template <typename G>

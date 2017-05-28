@@ -1,3 +1,10 @@
+/**
+ * \file
+ * \author stvdedal@gmail.com
+ *
+ * \brief
+ * gSpan algorithm
+ */
 #ifndef GSPAN_HPP
 #define GSPAN_HPP
 
@@ -5,6 +12,7 @@
 #include "gspan_helpers.hpp"
 #include "gspan_minimum_check.hpp"
 
+/// gspan algorithm
 namespace gspan {
 
   struct one_graph_tag
@@ -82,14 +90,14 @@ namespace gspan {
             VPT vpt,
             EPT ept)
   {
-    //
-    // R edges will be
-    // IF
-    // 1) forward edge  : src is rmpath vertex AND dst is new vertex OR
-    // 2) backward edge : src is rmost vertex AND dst is any rmpath vertex
-    // ELSE
-    // X edges
-    //
+    /**
+     * R edges will be
+     * IF
+     * 1) forward edge  : src is rmpath vertex AND dst is new vertex OR
+     * 2) backward edge : src is rmost vertex AND dst is any rmpath vertex
+     * ELSE
+     * X edges
+     */
 
     using MGV = typename boost::graph_traits<MG>::vertex_descriptor;
     using MGE = typename boost::graph_traits<MG>::edge_descriptor;
@@ -229,6 +237,9 @@ namespace gspan {
 
 } // namespace gspan
 
+/**
+ * Perform gSpan for one graph
+ */
 template <typename IG, typename Result, typename VPTag, typename EPTag>
 void
 gspan_one_graph(const IG& ig,
@@ -244,6 +255,9 @@ gspan_one_graph(const IG& ig,
   alg.run(r_ext);
 }
 
+/**
+ * Perform gSpan for many graphs
+ */
 template <typename IGIter, typename Result, typename VPTag, typename EPTag>
 void
 gspan_many_graphs(IGIter ig_begin,

@@ -1,3 +1,10 @@
+/**
+ * \file
+ * \author stvdedal@gmail.com
+ *
+ * \brief
+ * Type declarations
+ */
 #ifndef GSPAN_TYPES_HPP
 #define GSPAN_TYPES_HPP
 
@@ -23,10 +30,10 @@ class gspan_traits
   using ei_ig_pmap = typename boost::property_map<IG_, boost::edge_index_t>::const_type;
 public:
 
-  // type of the Input graph
+  /// type of the Input graph
   using IG = IG_;
 
-  // properties
+  /// properties
   using VI = typename boost::property_traits<vi_ig_pmap>::value_type;
   using EI = typename boost::property_traits<ei_ig_pmap>::value_type;
   using VP = typename boost::property_traits<vp_ig_pmap>::value_type;
@@ -34,16 +41,16 @@ public:
 
   using directed_category = typename boost::graph_traits<IG>::directed_category;
 
-  // type of the Mined graph
+  /// type of the Mined graph
   using MG = gspan::edgecodetree< VP, EP, directed_category, VI, EI>;
 
-  // subgraph (SBG)
+  /// subgraph (SBG)
   using SBG = gspan::subgraph_tree<IG, MG>;
 
-  // subgraph (SBG) lists
+  /// subgraph (SBG) lists
   using SBGS = gspan::subgraph_lists<SBG>;
 
-  // Edge extentions
+  /// Edge extentions
   using SG = std::map<const IG*, SBGS>;
   using RExt = std::map<MG, SG, gspan::edgecode_compare_dfs>;
   using XExt = std::map<MG, SG, gspan::edgecode_compare_lex>;

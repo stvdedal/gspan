@@ -1,3 +1,10 @@
+/**
+ * \file
+ * \author stvdedal@gmail.com
+ *
+ * \brief
+ * Subgraphs, mappings between Mined and Input graphs
+ */
 #ifndef GSPAN_SUBGRAPH_TREE_H_
 #define GSPAN_SUBGRAPH_TREE_H_
 
@@ -12,6 +19,11 @@
 
 namespace gspan {
 
+  /**
+   * \brief
+   * Subgraphs, mappings between Mined and Input graphs
+   * based on single-linked list
+   */
   template <typename IG, typename MG>
   class subgraph_tree
   {
@@ -31,14 +43,14 @@ namespace gspan {
                   const MinedGraph* mined_graph,
                   const subgraph_tree* prev);
 
-    const InputGraph* input_graph() const
+    const InputGraph*
+    input_graph() const
     {
       return _ig;
     }
 
-    //
-    // map Mined graph vertex to Input graph vertex
-    //
+    /// @name map Mined graph vertex to Input graph vertex
+    ///@{
     using InputGraphVerts = std::vector<typename IGT::vertex_descriptor>;
     using InputGraphVertsIter = typename InputGraphVerts::const_iterator;
     using MinedGraphVertIdMap = typename boost::property_map<MinedGraph, boost::vertex_index_t>::const_type;
@@ -46,10 +58,10 @@ namespace gspan {
 
     Mined2InputVertMap
     m2i_vert_map() const;
+    ///@}
 
-    //
-    // map Mined graph edge to Input graph edge
-    //
+    /// @name map Mined graph edge to Input graph edge
+    ///@{
     using InputGraphEdges = std::vector<typename IGT::edge_descriptor>;
     using InputGraphEdgesIter = typename InputGraphEdges::const_iterator;
     using MinedGraphEdgeIdMap = typename boost::property_map<MinedGraph, boost::edge_index_t>::const_type;
@@ -57,10 +69,10 @@ namespace gspan {
 
     Mined2InputEdgeMap
     m2i_edge_map() const;
+    ///@}
 
-    //
-    // map Input graph vertex to Mined graph vertex
-    //
+    /// @name map Input graph vertex to Mined graph vertex
+    ///@{
     using MinedGraphVerts = std::vector<typename MGT::vertex_descriptor>;
     using MinedGraphVertsIter = typename MinedGraphVerts::const_iterator;
     using InputGraphVertIdMap = typename boost::property_map<InputGraph, boost::vertex_index_t>::const_type;
@@ -68,10 +80,10 @@ namespace gspan {
 
     Input2MinedVertMap
     i2m_vert_map() const;
+    ///@}
 
-    //
-    // map Input graph edge to Mined graph edge
-    //
+    /// @name map Input graph edge to Mined graph edge
+    ///@{
     using MinedGraphEdges = std::vector<typename MGT::edge_descriptor>;
     using MinedGraphEdgesIter = typename MinedGraphEdges::const_iterator;
     using InputGraphEdgeIdMap = typename boost::property_map<InputGraph, boost::edge_index_t>::const_type;
@@ -79,9 +91,10 @@ namespace gspan {
 
     Input2MinedEdgeMap
     i2m_edge_map() const;
+    ///@}
 
-    // subgraphs is automorphic if they belong to the same graph
-    // and contains the same set of edges
+    /// subgraphs is automorphic if they belong to the same graph
+    /// and contains the same set of edges
     static bool
     is_automorphic(const subgraph_tree& lhs, const subgraph_tree& rhs);
 
@@ -94,26 +107,25 @@ namespace gspan {
     typename MGT::edge_descriptor _mg_edge;
     typename IGT::edge_descriptor _ig_edge;
 
-    // size  == num_vertices(MinedGraph)
-    // indexed by MinedGraph vertex_index
-    // values are InputGraph vertex_descriptor
+    /// size  == num_vertices(MinedGraph)
+    /// indexed by MinedGraph vertex_index
+    /// values are InputGraph vertex_descriptor
     InputGraphVerts _ig_vertices;
 
-    // size == num_edges(MinedGraph)
-    // indexed by MinedGraph edge_index
-    // values are InputGraph edge_descriptor
+    /// size == num_edges(MinedGraph)
+    /// indexed by MinedGraph edge_index
+    /// values are InputGraph edge_descriptor
     InputGraphEdges _ig_edges;
 
-    // size == num_vertices(InputGraph)
-    // indexed by InputGraph vertex_index
-    // values are MinedGraph vertex_descriptor
+    /// size == num_vertices(InputGraph)
+    /// indexed by InputGraph vertex_index
+    /// values are MinedGraph vertex_descriptor
     MinedGraphVerts _mg_vertices;
 
-    // size == num_edges(InputGraph)
-    // indexed by InputGraph edge_index
-    // values are MinedGraph edge_descriptor
+    /// size == num_edges(InputGraph)
+    /// indexed by InputGraph edge_index
+    /// values are MinedGraph edge_descriptor
     MinedGraphEdges _mg_edges;
-
   };
 
   //
@@ -242,37 +254,45 @@ namespace gspan {
   }
 
   template <typename IG, typename MG>
-  bool is_automorphic(const subgraph_tree<IG, MG>& lhs, const subgraph_tree<IG, MG>& rhs)
+  bool
+  is_automorphic(const subgraph_tree<IG, MG>& lhs,
+                 const subgraph_tree<IG, MG>& rhs)
   {
     return subgraph_tree<IG, MG>::is_automorphic(lhs, rhs);
   }
 
   template <typename IG, typename MG>
-  bool is_automorphic(const subgraph_tree<IG, MG>* lhs, const subgraph_tree<IG, MG>* rhs)
+  bool
+  is_automorphic(const subgraph_tree<IG, MG>* lhs,
+                 const subgraph_tree<IG, MG>* rhs)
   {
     return is_automorphic(*lhs, *rhs);
   }
 
-  template<typename SBG, typename MGV>
-  auto get_v_ig(const SBG& s, MGV&& v_mg)
+  template <typename SBG, typename MGV>
+  auto
+  get_v_ig(const SBG& s, MGV&& v_mg)
   {
     return get(s.m2i_vert_map(), v_mg);
   }
 
-  template<typename SBG, typename MGE>
-  auto get_e_ig(const SBG& s, MGE&& e_mg)
+  template <typename SBG, typename MGE>
+  auto
+  get_e_ig(const SBG& s, MGE&& e_mg)
   {
     return get(s.m2i_edge_map(), e_mg);
   }
 
-  template<typename SBG, typename IGV>
-  auto get_v_mg(const SBG& s, IGV&& v_ig)
+  template <typename SBG, typename IGV>
+  auto
+  get_v_mg(const SBG& s, IGV&& v_ig)
   {
     return get(s.i2m_vert_map(), v_ig);
   }
 
-  template<typename SBG, typename IGE>
-  auto get_e_mg(const SBG& s, IGE&& e_ig)
+  template <typename SBG, typename IGE>
+  auto
+  get_e_mg(const SBG& s, IGE&& e_ig)
   {
     return get(s.i2m_edge_map(), e_ig);
   }
