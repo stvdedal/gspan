@@ -4,6 +4,10 @@
 
 ## Data format
 
+there are two formats:
+
+### First format (recomodated)
+
 Input data is a one or many _input graphs_.
 Output data is one or many _patterns_ with _mappings_ to _input graph_.
 \# is comment line
@@ -46,6 +50,27 @@ e <edge_id> <graph_id> <edge_id>     # map pattern edge to original edge
 
 ```
 
+### traditional format
+
+```
+
+#
+# input
+#
+t # <graph_id>
+v <vertex_id> <value>
+e <vertex_id> <vertex_id> <value>
+
+#
+# output
+#
+t # <pattern_id> * <support>
+parent : <pattern_id>
+v <vertex_id> <value>
+e <vertex_id> <vertex_id> <value>
+x: <graph_id> ...
+
+```
 
 ### Reference
 - [Paper](http://www.cs.ucsb.edu/~xyan/papers/gSpan-short.pdf)
