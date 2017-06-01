@@ -18,6 +18,7 @@
 #include <list>
 #include <vector>
 #include <map>
+#include <set>
 #include <algorithm>
 #include <functional>
 
@@ -31,7 +32,6 @@ print_usage(std::ostream& s)
       "Graph-based substructure pattern mining.\n"
       "Read input data from standard input, write result to standard output.\n"
       "OPTION is\n"
-      "  -ofile           file to output\n"
       "  <-minoccurence>  minimal pattern occurence, in graph count, default 1\n"
       "  <-minsupport>    minimal pattern occurence, 0..1\n"
       "  -tgf             use tgf format for input and output\n"
@@ -118,6 +118,8 @@ write_egf(const GspanTraits::MG& mg, const GspanTraits::SG& sg, int support)
         std::cout << "e " << e_index(mg, e) << " " << source_index(mg, e) << " "
                   << target_index(mg, e) << " " << e_values[e_bundle(mg, e)] << std::endl;
 
+    print_dfsc(mg, std::cout);
+
     if (output_mappings != OUTPUT_MAPPING_NONE) {
         std::size_t map_no = 0;
         for (const auto& g_sbgs : sg) {
@@ -138,17 +140,35 @@ write_tgf(const GspanTraits::MG& mg, const GspanTraits::SG& sg, int support)
 {
     static std::size_t pattern_no = 0;
 
+    using MGE = GspanTraits::MG::edge_descriptor;
+    std::vector<MGE> mg_edges; // to reverse (for matching with gbolt)
+
+    mg_edges.reserve(num_edges(mg));
+    for (auto e : edges(mg))
+        mg_edges.push_back(e);
+
     std::cout << "t # " << pattern_no << " * " << support << std::endl;
     for (auto v : vertices(mg))
         std::cout << "v " << v_index(mg, v) << " " << v_bundle(mg, v) << std::endl;
-    for (auto e : edges(mg))
+
+    using RevIt = std::vector<MGE>::const_reverse_iterator;
+    for (RevIt ei = mg_edges.rbegin(); ei != mg_edges.rend(); ++ei) {
+        MGE e = *ei;
         std::cout << "e " << source_index(mg, e) << " " << target_index(mg, e)
                   << " " << e_bundle(mg, e) << std::endl;
-    std::cout << "x: ";
+    }
+
+    std::set<std::size_t> graph_ids;
     for (const auto& g_sbgs : sg) {
         const InputGraph& ig = *g_sbgs.first;
-        std::cout << ig[graph_bundle] << " ";
+        graph_ids.insert(ig[graph_bundle]);
     }
+
+    std::cout << "x: ";
+    for (std::size_t graph_id : graph_ids) {
+        std::cout << graph_id << " ";
+    }
+
     std::cout << std::endl << std::endl;
     ++pattern_no;
 }
@@ -514,15 +534,13 @@ main(int argc, char** argv)
         min_occurence = stat.graph_count * min_support;
     }
 
-#if 0
-    std::cout << "# input stat:\n"
+    std::cerr << "# input stat:\n"
               << "# graph count          = " << stat.graph_count << std::endl
               << "# vertices avg,min,max = "
               << stat.v.avg << ", " << stat.v.min << ", " << stat.v.max << std::endl
               << "# edges avg,min,max    = "
               << stat.e.avg << ", " << stat.e.min << ", " << stat.e.max << std::endl
               << "# min_occurence        = " << min_occurence << std::endl << std::endl;
-#endif
 
     if (input_graphs.size() == 1)
         gspan_one_graph(input_graphs.back(),

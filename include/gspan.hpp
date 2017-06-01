@@ -162,8 +162,9 @@ template <typename RExt, typename IG, typename VPT, typename EPT>
 void
 enumerate_one_edges(RExt& r_ext, const IG* ig, VPT vpt, EPT ept)
 {
-    for (auto e : edges(*ig))
-        add_edge(r_ext, e, ig, vpt, ept);
+    for (auto v : vertices(*ig))
+        for (auto e : out_edges(v, *ig))
+            add_edge(r_ext, e, ig, vpt, ept);
 }
 
 template <typename IG, typename Result, typename SupCalcType, typename VPTag,
