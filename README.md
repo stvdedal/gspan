@@ -2,11 +2,41 @@
 
 **gSpan** is an algorithm for mining frequent subgraphs.
 
-## Data format
+## Library
 
-there are two formats:
+Header-only in include directory
 
-### First format (recomodated)
+## Example command
+
+```
+$ ./example/gspan --help
+Usage: gspan [options]
+Graph-based substructure pattern mining.
+Depending on the graph count in input, there are two modes:
+  1. input contains one graph. Mined patterns belong to this one;
+       in this case only --mincount=NUM option is used
+  2. input contains many graphs. Mined patterns belong to some graph in input;
+       in this case --minsupp=NUM option is used, as more useful.
+Options:
+  -i, --input FILE        file to read, default stdin
+  -o, --output FILE       file to write, default stdout
+  -c, --mincount NUM      minimal count, integer value, default 1
+  -s, --minsupp NUM       minimal support, 0..1
+  -l, --legacy            use tgf format for input and output (slower!)
+  -e, --embeddings [opts] none, autgrp, all. default is none
+  -h, --help              this help
+
+```
+
+### Test
+
+[Performace Test](example/test/TEST.md)
+
+### Data format
+
+two formats supported:
+
+#### First format (recomodated)
 
 Input data is a one or many _input graphs_.
 Output data is one or many _patterns_ with _mappings_ to _input graph_.
@@ -50,7 +80,7 @@ e <edge_id> <graph_id> <edge_id>     # map pattern edge to original edge
 
 ```
 
-### traditional format
+#### Legacy format
 
 ```
 
