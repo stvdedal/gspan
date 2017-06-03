@@ -45,4 +45,3 @@ rm -f $PATTERN_DIR/refr.md5_
 rm -f $PATTERN_DIR/test.md5_
 
 diff <(cut -d ' ' -f1 $PATTERN_DIR/refr.md5) <(cut -d ' ' -f1 $PATTERN_DIR/test.md5)
-

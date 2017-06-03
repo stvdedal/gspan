@@ -27,15 +27,16 @@ time ${GBOLT} \
      -input_file ${INPUT} \
      -output_file /tmp/gbolt_out \
      -pattern
-cat /tmp/gbolt_out* > ref_output
+cat ${TMP}/gbolt_out* > ${TMP}/gbolt_output
 
 ####################################
 # run test program
-rm -f test_output
-time ../gspan --minsupp ${SUPP} --legacy --input $INPUT --output test_output
+rm -f ${TMP}/test_output
+time ../gspan --minsupp ${SUPP} --legacy --input $INPUT --output ${TMP}/test_output
 
-./match.sh ref_output test_output
-if [ $? -eq 0 ]
+./match.sh ${TMP}/gbolt_output ${TMP}/test_output
+RET=$?
+if [ $RET -eq 0 ]
 then
     echo
     echo "Good, test passed"
@@ -45,3 +46,4 @@ else
     echo "Bad, test not passed"
     echo
 fi
+exit $RET
