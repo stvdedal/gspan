@@ -6,12 +6,11 @@
 
 namespace gspan {
 
-  template <typename S>
-  class subgraph_lists
-  {
-  public:
+template <typename S>
+class subgraph_lists {
+public:
     subgraph_lists()
-      : aut_list_size(0)
+        : aut_list_size(0)
     {
     }
 
@@ -26,30 +25,25 @@ namespace gspan {
 
     template <class ... Args>
     void
-    insert(Args&&... args);
-  };
+    insert(Args&& ... args);
+};
 
-  template <typename S>
-  template <class ... Args>
-  void
-  subgraph_lists<S>::insert(Args&&... args)
-  {
+template <typename S>
+template <class ... Args>
+void
+subgraph_lists<S>::insert(Args&& ... args)
+{
     const S* s = &*all_list.emplace(all_list.begin(), args...);
-
-    bool aut_found = false;
-    for (auto& group : aut_list) {
-      if (is_automorphic(s, *group.begin())) {
-        aut_found = true;
-        group.push_back(s);
-        break;
-      }
+    const auto ri_end = aut_list.rend();
+    for (auto ri = aut_list.rbegin(); ri != ri_end; ++ri) {
+        if (is_automorphic(s, *ri->begin())) {
+            ri->push_back(s);
+            return;
+        }
     }
-    if (!aut_found) {
-      aut_list.resize(aut_list.size() + 1);
-      aut_list.back().push_back(s);
-      ++aut_list_size;
-    }
-  }
+    aut_list.push_back(std::vector<const S*>({s}));
+    ++aut_list_size;
+}
 
 } // namespace gspan
 
