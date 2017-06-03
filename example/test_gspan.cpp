@@ -14,7 +14,6 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <cctype>
 #include <list>
 #include <vector>
 #include <map>
@@ -22,23 +21,54 @@
 #include <algorithm>
 #include <functional>
 
+#include <cctype>
+#include <cstdlib>
+
 using namespace boost;
 
 void
 print_usage(std::ostream& s)
 {
+    // line width 80
+    // --------------------------------------------------------------------------------
     s <<
-      "Usage: gspan [ <minsupport> ] [OPTION]\n"
+      "Usage: gspan [options]\n"
       "Graph-based substructure pattern mining.\n"
-      "Read input data from standard input, write result to standard output.\n"
-      "OPTION is\n"
-      "  <-minoccurence>  minimal pattern occurence, in graph count, default 1\n"
-      "  <-minsupport>    minimal pattern occurence, 0..1\n"
-      "  -tgf             use tgf format for input and output\n"
-      "  -om              output pattern to input graph mapping options:\n"
-      "                     none, autgrp, all, default. default is none\n"
+      "Depending on the graph count in input, there are two modes:\n"
+      "  1. input contains one graph. Mined patterns belong to this one;\n"
+      "       in this case only --mincount=NUM option is used\n"
+      "  2. input contains many graphs. Mined patterns belong to some graph in input;\n"
+      "       in this case --minsupp=NUM option is used, as more useful.\n"
+      "Options:\n"
+      "  -i, --input FILE        file to read, default stdin\n"
+      "  -o, --output FILE       file to write, default stdout\n"
+      "  -c, --mincount NUM      minimal count, integer value, default 1\n"
+      "  -s, --minsupp NUM       minimal support, 0..1\n"
+      "  -l, --legacy            use tgf format for input and output (slower!)\n"
+      "  -e, --embeddings [opts] none, autgrp, all. default is none\n"
+      "  -h, --help              this help"
       << std::endl;
 }
+
+void error_usage()
+{
+    print_usage(std::cerr);
+    exit(1);
+}
+
+std::ifstream input_fstream;
+std::ofstream output_fstream;
+std::istream* input_stream = &std::cin;
+std::ostream* output_stream = &std::cout;
+bool no_output = false;
+bool use_legacy = false;
+enum OutputMappings {
+    OUTPUT_MAPPING_NONE,
+    OUTPUT_MAPPING_ONE_AUTOMORPH,
+    OUTPUT_MAPPING_ALL
+} output_mappings = OUTPUT_MAPPING_NONE;
+
+static std::size_t pattern_no = 0;
 
 /**
  * Vertex and edge properties are used by algorithm.
@@ -70,15 +100,6 @@ using InputGraphVertex = graph_traits<InputGraph>::vertex_descriptor;
 using InputGraphEdge = graph_traits<InputGraph>::edge_descriptor;
 using GspanTraits = gspan_traits<InputGraph, vertex_name_t, edge_name_t>;
 
-
-// options
-
-bool use_egf = true;
-
-enum OutputMappings {
-    OUTPUT_MAPPING_NONE, OUTPUT_MAPPING_ONE_AUTOMORPH, OUTPUT_MAPPING_ALL
-} output_mappings = OUTPUT_MAPPING_NONE;
-
 template <typename MG, typename SBG>
 void
 print_mapping(const MG& mg,
@@ -86,39 +107,43 @@ print_mapping(const MG& mg,
               std::size_t map_no,
               std::size_t autmorph_no)
 {
-    std::cout << std::endl;
-    std::cout << "m " << map_no << " # automorh " << autmorph_no << std::endl;
+    std::ostream& os = *output_stream;
+
+    os << std::endl;
+    os << "m " << map_no << " # automorh " << autmorph_no << std::endl;
     const InputGraph& ig = *s.input_graph();
     for (auto v_mg : vertices(mg)) {
         auto v_ig = get_v_ig(s, v_mg);
-        std::cout << "v " << v_index(mg, v_mg) << " ";
-        std::cout << ig[graph_bundle] << " ";
-        std::cout << get(get(vertex_index, ig), v_ig) << std::endl;
+        os << "v " << v_index(mg, v_mg) << " ";
+        os << ig[graph_bundle] << " ";
+        os << get(get(vertex_index, ig), v_ig) << std::endl;
     }
     for (auto e_mg : edges(mg)) {
         auto e_ig = get_e_ig(s, e_mg);
-        std::cout << "e " << e_index(mg, e_mg) << " ";
-        std::cout << ig[graph_bundle] << " ";
-        std::cout << get(get(edge_index, ig), e_ig) << std::endl;
+        os << "e " << e_index(mg, e_mg) << " ";
+        os << ig[graph_bundle] << " ";
+        os << get(get(edge_index, ig), e_ig) << std::endl;
     }
 }
 
 void
 write_egf(const GspanTraits::MG& mg, const GspanTraits::SG& sg, int support)
 {
-    static std::size_t pattern_no = 0;
     ++pattern_no;
 
-    std::cout << std::endl;
-    std::cout << "p " << pattern_no << " # occurence " << support << std::endl;
-    for (auto v : vertices(mg))
-        std::cout << "v " << v_index(mg, v) << " " << v_values[v_bundle(mg, v)]
-                  << std::endl;
-    for (auto e : edges(mg))
-        std::cout << "e " << e_index(mg, e) << " " << source_index(mg, e) << " "
-                  << target_index(mg, e) << " " << e_values[e_bundle(mg, e)] << std::endl;
+    if (no_output)
+        return;
 
-    print_dfsc(mg, std::cout);
+    std::ostream& os = *output_stream;
+
+    os << std::endl;
+    os << "p " << pattern_no << " # occurence " << support << std::endl;
+    for (auto v : vertices(mg))
+        os << "v " << v_index(mg, v) << " " << v_values[v_bundle(mg, v)]
+           << std::endl;
+    for (auto e : edges(mg))
+        os << "e " << e_index(mg, e) << " " << source_index(mg, e) << " "
+           << target_index(mg, e) << " " << e_values[e_bundle(mg, e)] << std::endl;
 
     if (output_mappings != OUTPUT_MAPPING_NONE) {
         std::size_t map_no = 0;
@@ -138,7 +163,11 @@ write_egf(const GspanTraits::MG& mg, const GspanTraits::SG& sg, int support)
 void
 write_tgf(const GspanTraits::MG& mg, const GspanTraits::SG& sg, int support)
 {
-    static std::size_t pattern_no = 0;
+    ++pattern_no;
+
+    if (no_output)
+        return;
+    std::ostream& os = *output_stream;
 
     using MGE = GspanTraits::MG::edge_descriptor;
     std::vector<MGE> mg_edges; // to reverse (for matching with gbolt)
@@ -147,15 +176,15 @@ write_tgf(const GspanTraits::MG& mg, const GspanTraits::SG& sg, int support)
     for (auto e : edges(mg))
         mg_edges.push_back(e);
 
-    std::cout << "t # " << pattern_no << " * " << support << std::endl;
+    os << "t # " << pattern_no - 1 << " * " << support << std::endl;
     for (auto v : vertices(mg))
-        std::cout << "v " << v_index(mg, v) << " " << v_bundle(mg, v) << std::endl;
+        os << "v " << v_index(mg, v) << " " << v_bundle(mg, v) << std::endl;
 
     using RevIt = std::vector<MGE>::const_reverse_iterator;
     for (RevIt ei = mg_edges.rbegin(); ei != mg_edges.rend(); ++ei) {
         MGE e = *ei;
-        std::cout << "e " << source_index(mg, e) << " " << target_index(mg, e)
-                  << " " << e_bundle(mg, e) << std::endl;
+        os << "e " << source_index(mg, e) << " " << target_index(mg, e)
+           << " " << e_bundle(mg, e) << std::endl;
     }
 
     std::set<std::size_t> graph_ids;
@@ -164,13 +193,12 @@ write_tgf(const GspanTraits::MG& mg, const GspanTraits::SG& sg, int support)
         graph_ids.insert(ig[graph_bundle]);
     }
 
-    std::cout << "x: ";
+    os << "x: ";
     for (std::size_t graph_id : graph_ids) {
-        std::cout << graph_id << " ";
+        os << graph_id << " ";
     }
 
-    std::cout << std::endl << std::endl;
-    ++pattern_no;
+    os << std::endl << std::endl;
 }
 
 inline
@@ -206,7 +234,7 @@ bool read_egf(std::list<InputGraph>& container, std::istream& is)
     std::size_t line_no = 0;
     std::string line;
 
-    while (getline(std::cin, line)) {
+    while (getline(is, line)) {
         ++line_no;
         remove_comment(line);
         remove_whitespaces_left(line);
@@ -303,7 +331,7 @@ bool read_tgf(std::list<InputGraph>& container, std::istream& is)
     std::size_t line_no = 0;
     std::string line;
 
-    while (getline(std::cin, line)) {
+    while (getline(is, line)) {
         ++line_no;
         if (line.empty())
             continue;
@@ -411,148 +439,141 @@ void calculate_statistics(const std::list<InputGraph>& container,
     stat->e.avg = 0;
     stat->e.min = 0;
     stat->e.max = 0;
-
     if (container.empty()) {
         return;
     }
-
-    std::size_t g_tot, v_tot, e_tot, v_min, v_max, e_min, e_max;
-    g_tot = v_tot = e_tot = 0;
-
-    v_min = 0;
-    v_max = 0;
-    e_min = 0;
-    e_max = 0;
-
-    v_max = v_min = num_vertices(container.front());
-    e_max = e_min = num_edges(container.front());
-
+    stat->v.max = stat->v.min = num_vertices(container.front());
+    stat->e.max = stat->e.min = num_edges(container.front());
     for (const InputGraph& g : container) {
-        ++g_tot;
+        ++stat->graph_count;
         std::size_t vn = num_vertices(g);
         std::size_t en = num_edges(g);
-        v_tot += vn;
-        e_tot += en;
-
-        if (v_min > vn) {
-            v_min = vn;
+        stat->v.avg += vn;
+        stat->e.avg += en;
+        if (stat->v.min > vn) {
+            stat->v.min = vn;
         }
-        if (e_min > en) {
-            e_min = en;
+        if (stat->v.max < vn) {
+            stat->v.max = vn;
         }
-        if (v_max < vn) {
-            v_max = vn;
+        if (stat->e.min > en) {
+            stat->e.min = en;
         }
-        if (e_max < en) {
-            e_max = en;
+        if (stat->e.max < en) {
+            stat->e.max = en;
         }
     }
-
-    stat->graph_count = g_tot;
-    stat->v.avg = v_tot / g_tot;
-    stat->v.min = v_min;
-    stat->v.max = v_max;
-    stat->e.avg = e_tot / g_tot;
-    stat->e.min = e_min;
-    stat->e.max = e_max;
+    stat->v.avg /= stat->graph_count;
+    stat->e.avg /= stat->graph_count;
 }
 
 int
 main(int argc, char** argv)
 {
-    std::list<InputGraph> input_graphs;
-
-    std::size_t min_occurence = 1;
-    bool use_support = false;
-    double min_support = 0;
+    std::size_t mincount = 0;
+    bool minsupp_exist = true;
+    double minsupp = 1.0;
 
     for (int i = 1; i < argc; ++i) {
-        std::string arg(argv[i]);
-        if (arg == "-h" || arg == "--help") {
+        std::string opt(argv[i]);
+        if (opt == "--help" || opt == "-h") {
             print_usage(std::cout);
             return 0;
         }
-        else if (arg == "-minoccurence") {
-            if (i + 1 < argc) {
-                std::string param(argv[i + 1]);
-                std::stringstream ss(param);
-                ss >> min_occurence;
-                if (!ss) {
-                    print_usage(std::cerr);
-                    return 1;
-                }
+        else if (opt == "--input" || opt == "-i") {
+            if (++i >= argc || input_fstream.is_open())
+                error_usage();
+            input_fstream.open(argv[i]);
+            input_stream = &input_fstream;
+            continue;
+        }
+        else if (opt == "--output" || opt == "-o") {
+            if (++i >= argc || output_fstream.is_open())
+                error_usage();
+            std::string file(argv[i]);
+            if (file != "/dev/null") {
+                output_fstream.open(file);
+                output_stream = &output_fstream;
             }
             else {
-                print_usage(std::cerr);
-                return 1;
+                no_output = true;
             }
+            continue;
         }
-        else if (arg == "-minsupport") {
-            if (i + 1 < argc) {
-                use_support = true;
-                std::string param(argv[i + 1]);
-                std::stringstream ss(param);
-                ss >> min_support;
-                if (!ss) {
-                    print_usage(std::cerr);
-                    return 1;
-                }
+        else if (opt == "--mincount" || opt == "-c") {
+            if (++i >= argc)
+                error_usage();
+            if (! (std::stringstream(argv[i]) >> mincount)) {
+                error_usage();
             }
-            else {
-                print_usage(std::cerr);
-                return 1;
-            }
+            continue;
         }
-        else if (arg == "-om") {
-            if (i + 1 < argc) {
-                std::string param(argv[i + 1]);
-                if (param == "autgrp") {
-                    output_mappings = OUTPUT_MAPPING_ONE_AUTOMORPH;
-                }
-                if (param == "all") {
-                    output_mappings = OUTPUT_MAPPING_ALL;
-                }
-                continue;
+        else if (opt == "--minsupp" || opt == "-s") {
+            if (++i >= argc)
+                error_usage();
+            if (! (std::stringstream(argv[i]) >> minsupp)) {
+                error_usage();
             }
-            else {
-                print_usage(std::cerr);
-                return 1;
-            }
+            minsupp_exist = true;
+            continue;
         }
-        else if (arg == "-tgf") {
-            use_egf = false;
+        else if (opt == "--legacy" || opt == "-l") {
+            use_legacy = true;
+        }
+        else if (opt == "--embeddings" || opt == "-e") {
+            if (++i >= argc)
+                error_usage();
+            std::string param(argv[i]);
+            if (param == "all")
+                output_mappings = OUTPUT_MAPPING_ALL;
+            else if (param == "autgrp")
+                output_mappings = OUTPUT_MAPPING_ONE_AUTOMORPH;
+            else if (param == "none")
+                output_mappings = OUTPUT_MAPPING_NONE;
+            else
+                error_usage();
+            continue;
+        }
+        else {
+            error_usage();
         }
     }
 
-    if (!(use_egf ? read_egf : read_tgf)(input_graphs, std::cin))
+    std::list<InputGraph> input_graphs;
+
+    if (!(use_legacy ? read_tgf : read_egf)(input_graphs, *input_stream))
         return 1;
 
     input_statistics stat;
     calculate_statistics(input_graphs, &stat);
 
-    if (use_support) {
-        min_occurence = stat.graph_count * min_support;
+    if (minsupp_exist) {
+        mincount = stat.graph_count * minsupp;
     }
 
-    std::cerr << "# input stat:\n"
+    std::cerr << std::endl;
+    std::cerr << "# input data statistics:\n"
               << "# graph count          = " << stat.graph_count << std::endl
               << "# vertices avg,min,max = "
               << stat.v.avg << ", " << stat.v.min << ", " << stat.v.max << std::endl
               << "# edges avg,min,max    = "
               << stat.e.avg << ", " << stat.e.min << ", " << stat.e.max << std::endl
-              << "# min_occurence        = " << min_occurence << std::endl << std::endl;
+              << "# min_count            = " << mincount << std::endl << std::endl;
 
     if (input_graphs.size() == 1)
         gspan_one_graph(input_graphs.back(),
-                        min_occurence,
-                        use_egf ? write_egf : write_tgf,
+                        mincount,
+                        use_legacy ? write_tgf : write_egf,
                         vertex_name,
                         edge_name);
     else
         gspan_many_graphs(input_graphs.begin(),
                           input_graphs.end(),
-                          min_occurence,
-                          use_egf ? write_egf : write_tgf,
+                          mincount,
+                          use_legacy ? write_tgf : write_egf,
                           vertex_name,
                           edge_name);
+
+    std::cerr << std::endl;
+    std::cerr << "# mined " << pattern_no << " patterns" << std::endl;
 }

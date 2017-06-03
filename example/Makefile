@@ -1,5 +1,5 @@
 INCLUDE := ../include
-CXXFLAGS += -O3 -Wall -I$(INCLUDE) 
+CXXFLAGS += -O3 -g -Wall -I$(INCLUDE) 
 # -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-local-typedefs
 GSPAN_HEADERS := $(shell find $(INCLUDE) -type f -name '*.hpp')
 
