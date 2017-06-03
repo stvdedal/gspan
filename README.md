@@ -30,7 +30,7 @@ Options:
 
 ### Test
 
-[Performace Test](example/test/TEST.md)
+[Performace Test](example/test/README.md)
 
 ### Data format
 
