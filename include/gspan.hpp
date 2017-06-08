@@ -102,63 +102,102 @@ enumerate(RExt& r_ext,
     using IGV = typename boost::graph_traits<IG>::vertex_descriptor;
     using IGE = typename boost::graph_traits<IG>::edge_descriptor;
 
-    MGV rmost_v = target(*rmpath_edges(mg).first, mg);
-    std::vector<bool> rmpath_vi_mask(num_edges(mg), false);
-    for (MGE e : rmpath_edges(mg))
-        rmpath_vi_mask[source_index(mg, e)] = true;
-    rmpath_vi_mask[v_index(mg, rmost_v)] = true;
+    // Right most path edges
+    // is a map
+    // Key   : vertex index
+    // Value : rmpath edge
+    std::vector<MGE> vsrc_edges(num_edges(mg));
+
+    // Right most path vertex mask
+    // size == num_vertices(mg)
+    // true: vertex on rm path; false otherwise
+    std::vector<bool> rmpath_vertex_mask(num_edges(mg), false);
+
+    for (MGE e : rmpath_edges(mg)) {
+        MGV v = source(e, mg);
+        vsrc_edges[v_index(mg, v)] = e;
+        rmpath_vertex_mask[v_index(mg, v)] = true;
+    }
+    MGV rmost_mg = target(*rmpath_edges(mg).first, mg);
+    rmpath_vertex_mask[v_index(mg, rmost_mg)] = true;
+
+    const auto& vl_min = v_bundle(mg, 0);
 
     for (const auto& s : sbgs.all_list) {
 
-        // for each vertices in MinedGraph
-        for (MGV vmg : vertices(mg)) {
+        // from right most vertex
+        IGV rmost_ig = get_v_ig(s, rmost_mg);
+        for (IGE e_ig : out_edges(rmost_ig, ig)) {
+            IGV v = target(e_ig, ig);
 
-            bool on_rmpath = rmpath_vi_mask[v_index(mg, vmg)];
-            bool is_rmost = vmg == rmost_v;
-
-            if (!on_rmpath)
+            // skip edges in MinedGraph
+            if (get_e_mg(s, e_ig) != MGE())
                 continue;
 
-            IGV u = get_v_ig(s, vmg);
-            for (IGE e : out_edges(u, ig)) {
-                IGV v = target(e, ig);
+            MGV v_mg = get_v_mg(s, v);
+            if (v_mg == MGV()) {
+                // R forward
 
-                // skip edges in MinedGraph
-                if (get_e_mg(s, e) != MGE())
+                // Partial pruning
+                if (get(vpt, ig, v) >= vl_min) {
+                    auto src = v_index(mg, rmost_mg);
+                    auto dst = v_index(mg, rmost_mg) + 1;
+                    add_edge(r_ext, src, dst, &mg, e_ig, &s, vpt, ept);
+                }
+            }
+            else if (rmpath_vertex_mask[v_index(mg, v_mg)]) {
+                // R backward
+
+                // Partial pruning
+                MGE rmpath_e_mg = vsrc_edges[v_index(mg, v_mg)];
+                IGE rmpath_e_ig = get_e_ig(s, rmpath_e_mg);
+                BOOST_ASSERT(rmpath_e_mg != MGE());
+                BOOST_ASSERT(get(ept, ig, rmpath_e_ig) == e_bundle(mg, rmpath_e_mg));
+                BOOST_ASSERT(get(vpt, ig, source(rmpath_e_ig, ig)) == source_bundle(mg,
+                             rmpath_e_mg));
+                BOOST_ASSERT(get(vpt, ig, target(rmpath_e_ig, ig)) == target_bundle(mg,
+                             rmpath_e_mg));
+
+                if (get(ept, ig, e_ig) > get(ept, ig, rmpath_e_ig) ||
+                        (get(ept, ig, e_ig) == get(ept, ig, rmpath_e_ig) &&
+                         get(vpt, ig, rmost_ig) >= get(vpt, ig, target(rmpath_e_ig, ig)) )) {
+
+                    auto src = v_index(mg, rmost_mg);
+                    auto dst = v_index(mg, v_mg);
+                    add_edge(r_ext, src, dst, &mg, e_ig, &s, vpt, ept);
+                }
+            }
+
+        } // for out_edges(rmost_ig)
+
+
+        for (MGE rmpath_e_mg : rmpath_edges(mg)) {
+            IGE rmpath_e_ig = get_e_ig(s, rmpath_e_mg);
+            IGV rmpath_v_ig = source(rmpath_e_ig, ig);
+
+            for (IGE e_ig : out_edges(rmpath_v_ig, ig)) {
+                IGV u = target(e_ig, ig);
+                // skip edges and vertices in MinedGraph
+                if (get_e_mg(s, e_ig) != MGE() || get_v_mg(s, u) != MGV())
                     continue;
 
-                // u vertex exists in rmpath
+                if (get(ept, ig, rmpath_e_ig) < get(ept, ig, e_ig) ||
+                        (get(ept, ig, rmpath_e_ig) == get(ept, ig, e_ig) &&
+                         get(vpt, ig, target(rmpath_e_ig, ig)) <= get(vpt, ig, u) ) ) {
 
-                if (get_v_mg(s, v) == MGV()) {
-                    // v vertex does not exist in MinedGraph
                     // R forward
-
-                    auto src = v_index(mg, vmg);
-                    auto dst = v_index(mg, rmost_v) + 1;
-                    add_edge(r_ext, src, dst, &mg, e, &s, vpt, ept);
+                    auto src = v_index(mg, source(rmpath_e_mg, mg));
+                    auto dst = v_index(mg, rmost_mg) + 1;
+                    add_edge(r_ext, src, dst, &mg, e_ig, &s, vpt, ept);
                 }
-                else {
-                    // v vertex exists in MinedGraph
-
-                    if (rmpath_vi_mask[v_index(mg, get_v_mg(s, v))]) {
-
-                        if (is_rmost) {
-                            // u vertex is rmost
-                            // v vertex exists in rmpath
-                            // R backward
-
-                            auto src = v_index(mg, vmg);
-                            auto dst = v_index(mg, get_v_mg(s, v));
-                            add_edge(r_ext, src, dst, &mg, e, &s, vpt, ept);
-                        }
-                    }
-                }
-            } // for all out_edges
-        } // for all vertices in MinedGraph
-    } // for all SBG list
+            }
+        }
+    }
 }
 
-template <typename RExt, typename IG, typename VPT, typename EPT>
+template <typename RExt,
+          typename IG,
+          typename VPT, typename EPT>
 void
 enumerate_one_edges(RExt& r_ext, const IG* ig, VPT vpt, EPT ept)
 {
@@ -179,7 +218,8 @@ public:
     using XExt = typename Traits::XExt;
 
     Alg(Result result, unsigned int minsup, VPTag vptag, EPTag eptag)
-        : vptag_(vptag), eptag_(eptag), minsup_(minsup), result_(result)
+        : vptag_(vptag), eptag_(eptag), minsup_(minsup), result_(result),
+          subgraph_mining_count_(0)
     {
     }
 
@@ -193,6 +233,8 @@ public:
     EPTag eptag_;
     unsigned int minsup_;
     Result result_;
+
+    std::size_t subgraph_mining_count_;
 };
 
 template <typename IG,
@@ -219,6 +261,8 @@ Alg<IG, Result, SupCalcType, VPTag, EPTag>::subgraph_mining(
     const SG& sg,
     unsigned int supp)
 {
+    ++subgraph_mining_count_;
+
     if (!is_minimum(mg)) {
         return;
     }
@@ -226,9 +270,9 @@ Alg<IG, Result, SupCalcType, VPTag, EPTag>::subgraph_mining(
     result_(mg, sg, supp);
 
     RExt r_edges;
-    XExt x_edges;
-    for (const auto& x : sg)
+    for (const auto& x : sg) {
         enumerate(r_edges, mg, *x.first, x.second, vptag_, eptag_);
+    }
 
     for (const auto& ext : r_edges) {
         unsigned int supp2 = support(ext.second, SupCalcType());
@@ -264,22 +308,26 @@ gspan_one_graph(const IG& ig,
  */
 template <typename IGIter, typename Result, typename VPTag, typename EPTag>
 void
-gspan_many_graphs(IGIter ig_begin,
-                  IGIter ig_end,
+gspan_many_graphs(const IGIter ig_begin,
+                  const IGIter ig_end,
                   unsigned int minsup,
                   Result result,
                   VPTag vptag,
                   EPTag eptag)
 {
     using IG = typename std::iterator_traits<IGIter>::value_type;
-    typename gspan_traits<IG, VPTag, EPTag>::RExt r_ext;
-    for (; ig_begin != ig_end; ++ig_begin) {
-        gspan::enumerate_one_edges(r_ext, &*ig_begin, vptag, eptag);
-    }
-
     using Alg = gspan::Alg<IG, Result, gspan::many_graphs_tag, VPTag, EPTag>;
     Alg alg(result, minsup, vptag, eptag);
+
+    typename gspan_traits<IG, VPTag, EPTag>::RExt r_ext;
+    for (IGIter g = ig_begin; g != ig_end; ++g) {
+        gspan::enumerate_one_edges(r_ext, &*g, vptag, eptag);
+    }
+
     alg.run(r_ext);
+
+    std::cerr << "subgraph_mining_count=" << alg.subgraph_mining_count_ <<
+              std::endl;
 }
 
 #endif
